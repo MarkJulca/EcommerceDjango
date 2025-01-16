@@ -1,4 +1,4 @@
-from django.shortcuts import render,get_object_or_404
+from django.shortcuts import render,get_object_or_404,redirect
 #importamos modelos para asignarlos a index.html 
 from .models import Categoria,Producto
 
@@ -60,3 +60,49 @@ def productoDetalle(request,producto_id):
     }
     
     return render(request,'producto.html',context)
+
+"""VISTAS PARA EL CARRITO DE COMPRAS """
+#Importamos de carrito .py el cart
+from .carrito import Cart
+
+#Creamos vista que llamara a carrito.html
+def carrito(request):
+    return render(request,'carrito.html')
+
+##metodo vista agregar carrito con parametro producto_id
+def agregarCarrito(request,producto_id):
+    #Por metodo POST chapara del name del input llamado cantidad
+    if request.method == 'POST':
+        cantidad = int(request.POST['cantidad'])
+    #caso contrario es 1
+    else:
+        cantidad = 1
+#obtenemos producto en base al producto_id
+    objProducto = Producto.objects.get(pk=producto_id)
+    carritoProducto = Cart(request)
+#en la variable carritoProducto agregamos el producto y la cantidad
+    carritoProducto.add(objProducto,cantidad)
+#Imprimir en consola lo que tiene la variable cart
+    #print(request.session.get("cart"))
+    #si el metodo que estamos esperando es GET
+    #que nos retorne a la pagina principal con /
+    if request.method == 'GET':
+        return redirect('/')
+    return render(request,'carrito.html')
+#Vista eliminar que tiene parametro producto_id
+def eliminarProductoCarrito(request,producto_id):
+    #obtenemos productos
+    objProducto = Producto.objects.get(pk=producto_id)
+    #creamos instancia de Cart
+    carritoProducto = Cart(request)
+    #Luego ponemos delete que viene de carrito.py, pasandolñe el objecto
+    carritoProducto.delete(objProducto)
+    #direccionamos a carrito.html
+    return render(request,'carrito.html')
+#vista de limpiarCarrito limpia todos los productos
+def limpiarCarrito(request):
+    #metodo llamado clear de carrito.py
+    carritoProducto = Cart(request)
+    carritoProducto.clear()
+    #enviamos a esta vista
+    return render(request,'carrito.html')

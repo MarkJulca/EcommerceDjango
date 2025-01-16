@@ -7,6 +7,7 @@
     </ul>
     <div class="page-styling">
     <div class="woocommerce prod-litems section-list">
+        <!--Agregamos un for para iterar en diccionario de la session llamada cart-->
         {% for key,value in request.session.cart.items %}
         <article class="prod-li sectls">
             <div class="prod-li-inner">
@@ -48,7 +49,8 @@ No Space
                         <p class="prod-li-rating-count">12</p>
                     </div>
                     <p class="prod-li-add">
-                        <a href="{% url 'web:eliminarProductoCarrito' value.producto_id %}" class="button hover-label prod-addbtn"><i class="icon ion-close-round"></i><span>Eliminar</span></a>
+                     <a href="{% url 'web:eliminarProductoCarrito' value.producto_id %}" class="button hover-label prod-addbtn">
+                        <i class="icon ion-close-round"></i><span>Eliminar</span></a>
                     </p>
                     <p class="prod-li-information">
                         <a href="#" class="hover-label"><i class="icon ion-more"></i><span>Show Information</span></a>
@@ -80,7 +82,7 @@ No Space
         </div>
         <div class="cart-collaterals">
             <a href="{% url 'web:limpiarCarrito' %}" class="checkout-button button">Limpiar Carrito</a>
-            <a href="{% url 'web:registrarPedido' %}" class="checkout-button button">Realizar Pedido</a>
+            <a href="" class="checkout-button button">Realizar Pedido</a>
             <div class="order-total">
                 <p class="cart-totals-ttl">Total</p>
                 <p class="cart-totals-val">${{request.session.cartMontoTotal}}</p>
