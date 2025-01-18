@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'web',
+    'paypal.standard.ipn',
     'django_admin_tailwind',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -132,3 +133,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_ROOT = os.path.join(BASE_DIR,'media')
 MEDIA_URL = '/media/'
+#para usar sandbox de paypal en modo prueba
+PAYPAL_TEST = True
+#para envio mensaje SMTP  a correo
+EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
+EMAIL_HOST_USER = 'a937c51016de9a'
+EMAIL_HOST_PASSWORD = 'f65be3544677bf'
+EMAIL_PORT = '2525'
+
+

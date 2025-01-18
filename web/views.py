@@ -1,6 +1,7 @@
 from django.shortcuts import render,get_object_or_404,redirect
+from django.urls import reverse
 #importamos modelos para asignarlos a index.html 
-from .models import Categoria,Producto,Cliente
+from .models import Categoria,Producto,Cliente,Pedido,PedidoDetalle
 
 # Create your views here.
 """ VISTAS PARA EL CATALOGO DE PROUDCTOS """
@@ -264,6 +265,30 @@ def actualizarCliente(request):
 
 
 """ VISTAS PARA PROCESO DE COMPRA """
+#PRUEBA PAYPAL
+def view_that_asks_for_money(request):
+
+    # What you want the button to do.
+    paypal_dict = {
+        #correo de business ponemos el que tenemos
+        #notify url notifica a paypal
+        #return redirecciona a / osea principal
+        #si cancela va a logout
+        "business": "sb-zw3bu37035416@business.example.com",
+        "amount": "100.00",
+        "item_name": "producto de prueba edteam",
+        "invoice": "100-ED100",
+        "notify_url": request.build_absolute_uri(reverse('paypal-ipn')),
+        "return": request.build_absolute_uri('/'),
+        "cancel_return": request.build_absolute_uri('/logout'),
+        "custom": "premium_plan",  # Custom command to correlate to some function later (optional)
+    }
+
+    # Create the instance.
+    form = PayPalPaymentsForm(initial=paypal_dict)
+    context = {"form": form}
+    return render(request, "payment.html", context)
+
 #usando decorators con login_url 
 # redirecciona en este caso a /login de urls py
 #si es que no esta logueado
@@ -304,3 +329,139 @@ def registrarPedido(request):
     }
     
     return render(request,'pedido.html',context)
+#prueba de paypal
+from paypal.standard.forms import PayPalPaymentsForm
+
+#que vaya a login si no esta logueado
+@login_required(login_url='/login')
+def confirmarPedido(request):
+    context = {}
+    #verificar que haya sido enviado por metodo POST
+    if request.method == "POST":
+         #actualizamos datos de usuario
+         #a partir de User sacamos la data
+        actUsuario = User.objects.get(pk=request.user.id)
+        #viene de name de pedido.html ese nombre y apellidos
+        actUsuario.first_name = request.POST['nombre']
+        actUsuario.last_name = request.POST['apellidos']
+        #grabamos
+        actUsuario.save()
+    #registramos o actualizamos cliente
+    #try validar que del modelo Cliente buscamos por usuario
+    # aca actualiza si existe
+        try:
+            clientePedido = Cliente.objects.get(usuario=request.user)
+             #viene de name de pedido.html ese telefono y direccion
+            clientePedido.telefono = request.POST['telefono']
+            clientePedido.direccion = request.POST['direccion']
+              #grabamos
+            clientePedido.save()
+            # aca agrega si no existe
+            #en caso no tenga creado o no exista creamos nuevo
+        except:
+            clientePedido = Cliente()
+            clientePedido.usuario = actUsuario
+            clientePedido.direccion = request.POST['direccion']
+            clientePedido.telefono = request.POST['telefono']
+            clientePedido.save()   
+        #registramos nuevo pedido con estas variables
+        nroPedido = ''
+        #viene de esta linea de pedido.html  la variable session   
+        # <p class="cart-totals-val">$ request.session.cartMontoTotal </p>
+        montoTotal = float(request.session.get('cartMontoTotal'))
+        #instanciamos en variable nuevoPedido
+        nuevoPedido = Pedido()
+        # y le pasamos el cliente de arriba
+        nuevoPedido.cliente = clientePedido
+        #guardamos
+        nuevoPedido.save()
+        
+        #registramos el detalle del pedido
+        #chapamos lo de la session llamada cart
+        #todo lo que esta en value esta en carrito de compras 
+        carritoPedido = request.session.get('cart')
+        for key,value in carritoPedido.items():
+            productoPedido = Producto.objects.get(pk=value['producto_id'])
+            detalle = PedidoDetalle()
+            detalle.pedido = nuevoPedido
+            detalle.producto = productoPedido
+            detalle.cantidad = int(value['cantidad'])
+            detalle.subtotal = float(value['subtotal'])
+            #registra pedido
+            detalle.save()
+         #actualizar pedido, damos formato de PED + con strftime string la fecha y solo
+         #chapamos el año osea %Y + el id
+        nroPedido = 'PED' + nuevoPedido.fecha_registro.strftime('%Y') + str(nuevoPedido.id)
+        #asignamos el nroPedido
+        nuevoPedido.nro_pedido = nroPedido
+        #analogamente el montoTotal
+        nuevoPedido.monto_total = montoTotal
+        #grabamos
+        nuevoPedido.save()
+         #registramos el id del pedido en la sesión
+        request.session['pedidoId'] = nuevoPedido.id
+        
+        #Creamos boton de paypal
+        #cuando pague ira a una pagina "gracias" 
+        #el cancelar nos llevara a principal
+        #le pasamos valores y en business copiamos de block de notas
+        #el que generamos para pruebas 
+        paypal_dict = {
+        "business": "sb-zw3bu37035416@business.example.com",
+        "amount": montoTotal,
+        "item_name": "PEDIDO CODIGO : "+ nroPedido,
+        "invoice": nroPedido,
+        "notify_url": request.build_absolute_uri(reverse('paypal-ipn')),
+        "return": request.build_absolute_uri('/gracias'),
+        "cancel_return": request.build_absolute_uri('/')
+        }
+
+        # Create the instance.
+        formPaypal = PayPalPaymentsForm(initial=paypal_dict)
+        
+        
+        context = {
+            #por medio de pedido en compra.html asignaremos valores
+            'pedido':nuevoPedido,
+            'formPaypal':formPaypal
+        }
+         #limpiamos carrito de compras
+        carrito = Cart(request)
+        carrito.clear()
+ 
+    return render(request,'compra.html',context)
+#para envio a correo
+from django.core.mail import send_mail
+#VISTA GRACIAS
+#necesita estar logueado si no no aparece vista de gracias
+@login_required(login_url='/login')
+def gracias(request):
+    #validamos que el PayerID que nos da paypal cuando
+    #pagamos en URL lo obtenemos
+    paypalId = request.GET.get('PayerID',None)
+    context = {}
+    #validamos que si no es vacio entonces
+    if paypalId is not None:
+        #cogemos la session pedidoId
+        pedidoId = request.session.get('pedidoId')
+        pedido = Pedido.objects.get(pk=pedidoId)
+        pedido.estado = '1'
+        pedido.save()
+            #envio de correo
+            #en el request.user.email es para el usuario a su email
+            #adicional puedes enviar a otros correos como cesarmay...
+            #lo enviara de maikiwolfsj@gmail.com
+        send_mail(
+                'Gracias por tu compra',
+                'tu nro de pedido es ' + pedido.nro_pedido,
+                'maikiwolfsj@gmail.com',
+                [request.user.email],
+                fail_silently=False,
+            )
+        
+        context = {
+            'pedido' : pedido
+        }
+    else:   
+        return redirect('/')
+    return render(request,'gracias.html',context)
