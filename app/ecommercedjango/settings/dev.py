@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 import os
 from pathlib import Path
-
+from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -135,10 +135,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR,'media')
 MEDIA_URL = '/media/'
 #para usar sandbox de paypal en modo prueba
 PAYPAL_TEST = True
+PAYPAL_USER_EMAIL = config('PAYPAL_USER_EMAIL')
 #para envio mensaje SMTP  a correo
 EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
 EMAIL_HOST_USER = 'a937c51016de9a'
 EMAIL_HOST_PASSWORD = 'f65be3544677bf'
 EMAIL_PORT = '2525'
 
+ADMIN_USER_EMAIL = config('ADMIN_USER_EMAIL')
 

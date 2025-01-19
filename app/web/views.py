@@ -2,7 +2,7 @@ from django.shortcuts import render,get_object_or_404,redirect
 from django.urls import reverse
 #importamos modelos para asignarlos a index.html 
 from .models import Categoria,Producto,Cliente,Pedido,PedidoDetalle
-
+from django.conf import settings
 # Create your views here.
 """ VISTAS PARA EL CATALOGO DE PROUDCTOS """
 def index(request):
@@ -265,30 +265,6 @@ def actualizarCliente(request):
 
 
 """ VISTAS PARA PROCESO DE COMPRA """
-#PRUEBA PAYPAL
-def view_that_asks_for_money(request):
-
-    # What you want the button to do.
-    paypal_dict = {
-        #correo de business ponemos el que tenemos
-        #notify url notifica a paypal
-        #return redirecciona a / osea principal
-        #si cancela va a logout
-        "business": "sb-zw3bu37035416@business.example.com",
-        "amount": "100.00",
-        "item_name": "producto de prueba edteam",
-        "invoice": "100-ED100",
-        "notify_url": request.build_absolute_uri(reverse('paypal-ipn')),
-        "return": request.build_absolute_uri('/'),
-        "cancel_return": request.build_absolute_uri('/logout'),
-        "custom": "premium_plan",  # Custom command to correlate to some function later (optional)
-    }
-
-    # Create the instance.
-    form = PayPalPaymentsForm(initial=paypal_dict)
-    context = {"form": form}
-    return render(request, "payment.html", context)
-
 #usando decorators con login_url 
 # redirecciona en este caso a /login de urls py
 #si es que no esta logueado
@@ -407,7 +383,7 @@ def confirmarPedido(request):
         #le pasamos valores y en business copiamos de block de notas
         #el que generamos para pruebas 
         paypal_dict = {
-        "business": "sb-zw3bu37035416@business.example.com",
+        "business": settings.PAYPAL_USER_EMAIL,
         "amount": montoTotal,
         "item_name": "PEDIDO CODIGO : "+ nroPedido,
         "invoice": nroPedido,
@@ -453,8 +429,8 @@ def gracias(request):
             #lo enviara de maikiwolfsj@gmail.com
         send_mail(
                 'Gracias por tu compra',
-                'tu nro de pedido es ' + pedido.nro_pedido,
-                'maikiwolfsj@gmail.com',
+                'Tu nro de pedido es ' + pedido.nro_pedido,
+                settings.ADMIN_USER_EMAIL,
                 [request.user.email],
                 fail_silently=False,
             )
